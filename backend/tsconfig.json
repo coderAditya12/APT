@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    /* Project Layout */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* Node.js Compatibility */
+    "module": "NodeNext",
+    "target": "ESNext",
+    "lib": ["ESNext"],
+
+    /* Modern Standards & Compilation Performance */
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+
+    /* Essential Type Safety */
+    "strict": true
+  },
+  "include": ["src/**/*"]
+}
