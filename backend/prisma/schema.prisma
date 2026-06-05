@@ -12,18 +12,19 @@ datasource db {
   provider = "postgresql"
 }
 
-model User { 
-  id    Int     @id @default(autoincrement()) 
-  email String  @unique
-  name  String?
-  posts Post[]
-} 
-model Post { 
-  id        Int     @id @default(autoincrement()) 
-  title     String
-  content   String?
-  description String?
-  published Boolean @default(false) 
-  author    User    @relation(fields: [authorId], references: [id]) 
-  authorId  Int
+enum OrderStatus {
+  PENDING   @map("pending")
+  SHIPPED   @map("shipped")
+  DELIVERED @map("delivered")
+}
+
+// 2. Define the orders model
+model Order {
+  id            Int         @id @default(autoincrement())
+  customerName  String      @map("customer_name")
+  productName   String      @map("product_name")
+  status        OrderStatus @default(PENDING)
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@map("orders") // Maps the Prisma model to the exact lowercase 'orders' database table
 }
