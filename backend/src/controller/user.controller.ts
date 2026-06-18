@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import userModel from "../models/user.model.js";
 export const sentOtp = async (req: Request, res: Response) => {
   if (!req.body.mobileNumber || req.body.mobileNumber.length !== 10) {
@@ -57,7 +58,78 @@ export const verifyOtp = async (req: Request, res: Response) => {
     user.otp = null;
     user.otpExpiry = null;
     await user.save();
-    return res.status(200).json({ message: "OTP verified successfully" });
+
+    const accessToken = jwt.sign(
+      { id: user._id, mobileNumber: user.mobileNumber, role: user.role },
+      process.env.ACCESS_TOKEN_SECRET!,
+      { expiresIn: "15m" },
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      process.env.REFRESH_TOKEN_SECRET!,
+      { expiresIn: "24h" },
+    );
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      message: "OTP verified successfully",
+      // accessToken,
+      // refreshToken,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+import type { AuthenticatedRequest } from "../middleware/auth.middleware.js";
+
+export const createUser = async (req: AuthenticatedRequest, res: Response) => {
+
+
+  const { userName, mobileNumber, role } = req.body;
+
+
+  if (!userName || !mobileNumber || !role) {
+    return res.status(400).json({ message: "userName, mobileNumber, and role are required" });
+  }
+  if (req.user?.role !== "super-admin") {
+    return res.status(403).json({ message: "access denied" });
+  }
+
+  if (mobileNumber.length !== 10) {
+    return res.status(400).json({ message: "Mobile number must be 10 digits" });
+  }
+
+  try {
+    const existingUser = await userModel.findOne({ mobileNumber });
+    if (existingUser) {
+      return res.status(409).json({ message: "A user with this mobile number already exists" });
+    }
+    const newUser = new userModel({ userName, mobileNumber, role });
+    await newUser.save();
+
+    return res.status(201).json({
+      message: "User created successfully",
+      user: {
+        id: newUser._id,
+        userName: newUser.userName,
+        mobileNumber: newUser.mobileNumber,
+        role: newUser.role,
+      },
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "Internal server error" });
